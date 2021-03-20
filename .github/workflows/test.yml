@@ -22,7 +22,7 @@ jobs:
       # We'll use this as our working directory for all subsequent commands
       run: |
         sudo apt update
-        sudo apt install libboost-dev -y
+        sudo apt install libboost-dev -yq
         cmake -E make_directory ${{github.workspace}}/build
 
     - name: Configure CMake
