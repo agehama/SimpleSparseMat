@@ -87,6 +87,49 @@ namespace ssmat
 			return entries;
 		}
 
+		SparseMat<T> operator*(const SparseMat<T>& B)const
+		{
+			std::vector<SparseEntry<T>> results;
+			for (IndexT yA = 0; yA + 1 < rowBeginIndices.size(); ++yA)
+			{
+				const IndexT rowBeginA = rowBeginIndices[yA];
+				const IndexT rowEndA = rowBeginIndices[yA + 1];
+
+				std::map<IndexT, T> currentRow;
+				for (IndexT yB = 0; yB + 1 < B.rowBeginIndices.size(); ++yB)
+				{
+					const IndexT rowBeginB = B.rowBeginIndices[yB];
+					const IndexT rowEndB = B.rowBeginIndices[yB + 1];
+					if (rowBeginB == rowEndB)
+					{
+						continue;
+					}
+
+					for (IndexT iA = rowBeginA; iA < rowEndA; ++iA)
+					{
+						const IndexT xA = xs[iA];
+						if (xA != yB)
+						{
+							continue;
+						}
+
+						for (IndexT iB = rowBeginB; iB < rowEndB; ++iB)
+						{
+							const IndexT xB = B.xs[iB];
+							currentRow[xB] += vs[iA] * B.vs[iB];
+						}
+					}
+				}
+
+				for (const auto& entry : currentRow)
+				{
+					results.emplace_back(entry.first, yA, entry.second);
+				}
+			}
+
+			return SparseMat<T>(results);
+		}
+
 		const std::vector<IndexT>& getRowBeginIndices()const { return rowBeginIndices; }
 		const std::vector<IndexT>& getXs()const { return xs; }
 		const std::vector<T>& getVs()const { return vs; }
