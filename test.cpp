@@ -1,9 +1,20 @@
+#include <ostream>
+
 #define BOOST_TEST_MAIN
 #include <boost/test/included/unit_test.hpp>
 
 #include "SimpleSparseMat.hpp"
 
 #define FOR_MAT(W, H) for (size_t y = 0; y < H; ++y) for (size_t x = 0; x < W; ++x)
+
+namespace ssmat
+{
+	template<typename T>
+	inline std::ostream& operator<<(std::ostream& s, const ssmat::SparseEntry<T>& entry)
+	{
+		return s << "(" << entry.x << ", " << entry.y << " | " << entry.v << ")";
+	}
+}
 
 namespace
 {
@@ -29,19 +40,34 @@ namespace
 	template<typename T, size_t W, size_t H>
 	void ToArray(const ssmat::SparseMat<T>& sparseMat, T(&matOut)[H][W])
 	{
-		const auto& columnBeginIndices = sparseMat.getRowBeginIndices();
+		const auto& rowBeginIndices = sparseMat.getRowBeginIndices();
 		const auto& xs = sparseMat.getXs();
 		const auto& vs = sparseMat.getVs();
 
 		BOOST_CHECK_EQUAL(vs.size(), xs.size());
 
-		for (size_t y = 0; y + 1 < columnBeginIndices.size(); ++y)
+		for (size_t y = 0; y < rowBeginIndices.size(); ++y)
 		{
-			const size_t rowBegin = columnBeginIndices[y];
-			const size_t rowEnd = columnBeginIndices[y + 1];
+			const size_t rowBegin = rowBeginIndices[y];
+			const size_t rowEnd = rowBeginIndices.size() == y + 1 ? xs.size() : rowBeginIndices[y + 1];
 			for (size_t i = rowBegin; i < rowEnd; ++i)
 			{
 				matOut[y][xs[i]] = vs[i];
+			}
+		}
+	}
+
+	template<typename T, size_t W_A, size_t H_A, size_t W_B>
+	void MultipleMat(const T(&matA)[H_A][W_A], const T(&matB)[W_A][W_B], T(&matC)[H_A][W_B])
+	{
+		for (size_t i = 0; i < H_A; ++i)
+		{
+			for (size_t j = 0; j < W_B; ++j)
+			{
+				for (size_t k = 0; k < W_A; ++k)
+				{
+					matC[i][j] += matA[i][k] * matB[k][j];
+				}
 			}
 		}
 	}
@@ -105,16 +131,7 @@ BOOST_AUTO_TEST_CASE(SparseMat_Multiplication)
 		{0, 3, 0},
 	};
 	int matC[height][height] = {};
-	for (size_t i = 0; i < height; ++i)
-	{
-		for (size_t j = 0; j < height; ++j)
-		{
-			for (size_t k = 0; k < width; ++k)
-			{
-				matC[i][j] += matA[i][k] * matB[k][j];
-			}
-		}
-	}
+	MultipleMat(matA, matB, matC);
 
 	const auto sparseMatA = FromArray(matA);
 	const auto sparseMatB = FromArray(matB);
@@ -127,8 +144,32 @@ BOOST_AUTO_TEST_CASE(SparseMat_Multiplication)
 	{
 		BOOST_CHECK_EQUAL(matC[y][x], matC_[y][x]);
 	}
+}
 
-	BOOST_CHECK(true);
+BOOST_AUTO_TEST_CASE(SparseMat_Insert)
+{
+	constexpr int width = 4;
+	constexpr int height = 3;
+	int matIn[height][width] = {
+		{0, 0, 2, 1},
+		{2, 0, 0, 5},
+		{0, 0, 4, 0},
+	};
+
+	auto sparseMatA = FromArray(matIn);
+
+	matIn[1][2] = 3;
+	matIn[2][3] = 1;
+	sparseMatA.insert(2, 1, 3);
+	sparseMatA.insert(3, 2, 1);
+
+	int matOut[height][width] = {};
+	ToArray(sparseMatA, matOut);
+
+	FOR_MAT(height, height)
+	{
+		BOOST_CHECK_EQUAL(matIn[y][x], matOut[y][x]);
+	}
 }
 
 BOOST_AUTO_TEST_SUITE_END()
