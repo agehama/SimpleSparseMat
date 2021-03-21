@@ -57,11 +57,12 @@ BOOST_AUTO_TEST_CASE(SparseMat_Init)
 
 BOOST_AUTO_TEST_CASE(SparseMat_Init2)
 {
-	const auto entriesIn = SortEntries(ssmat::MakeEntries(
-		{2,1,3,3,2,0,0,1},
-		{2,1,0,1,0,2,1,0},
-		{4,3,1,5,2,1,2,1}
-	));
+	auto data = ssmat::MakeEntries(
+		{ 2,1,3,3,2,0,0,1 },
+		{ 2,1,0,1,0,2,1,0 },
+		{ 4,3,1,5,2,1,2,1 }
+	);
+	const auto entriesIn = SortEntries(data);
 
 	const ssmat::SparseMat<int> sparseMat(entriesIn);
 	const auto entriesOut = sparseMat.decompressEntries();
