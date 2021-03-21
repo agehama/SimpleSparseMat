@@ -6,7 +6,7 @@
 
 BOOST_AUTO_TEST_SUITE(aa)
 
-BOOST_AUTO_TEST_CASE(init_test1)
+BOOST_AUTO_TEST_CASE(SparseMat_Init)
 {
 	constexpr int width = 4;
 	constexpr int height = 3;
@@ -55,5 +55,22 @@ BOOST_AUTO_TEST_CASE(init_test1)
 	}
 }
 
+BOOST_AUTO_TEST_CASE(SparseMat_Init2)
+{
+	const auto entriesIn = SortEntries(ssmat::MakeEntries(
+		{2,1,3,3,2,0,0,1},
+		{2,1,0,1,0,2,1,0},
+		{4,3,1,5,2,1,2,1}
+	));
+
+	const ssmat::SparseMat<int> sparseMat(entriesIn);
+	const auto entriesOut = sparseMat.decompressEntries();
+
+	BOOST_CHECK_EQUAL(entriesIn.size(), entriesOut.size());
+	for (size_t i = 0; i < entriesIn.size(); ++i)
+	{
+		BOOST_CHECK_EQUAL(entriesIn[i], entriesOut[i]);
+	}
+}
 
 BOOST_AUTO_TEST_SUITE_END()
