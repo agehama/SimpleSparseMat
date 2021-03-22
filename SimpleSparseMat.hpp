@@ -40,6 +40,8 @@ namespace ssmat
 	class SparseMat
 	{
 	public:
+		SparseMat() = default;
+
 		SparseMat(const std::vector<SparseEntry<T>>& sortedEntries)
 		{
 			if (sortedEntries.empty())
@@ -57,6 +59,35 @@ namespace ssmat
 
 				xs.push_back(entry.x);
 				vs.push_back(entry.v);
+			}
+		}
+
+		void initFrom(const std::vector<SparseEntry<T>>& sortedEntries)
+		{
+			*this = SparseMat<T>(sortedEntries);
+		}
+
+		void fill(IndexT rowCount, IndexT columnCount, T value)
+		{
+			if (value == 0)
+			{
+				rowBeginIndices.clear();
+				xs.clear();
+				vs.clear();
+			}
+			else
+			{
+				const IndexT elemCount = rowCount * columnCount;
+				rowBeginIndices.resize(rowCount);
+				std::iota(rowBeginIndices.begin(), rowBeginIndices.end(), 0);
+				std::transform(rowBeginIndices.begin(), rowBeginIndices.end(), rowBeginIndices.begin(), [columnCount](IndexT y) { return y * columnCount; });
+
+				xs.resize(elemCount);
+				std::iota(xs.begin(), xs.end(), 0);
+				std::transform(xs.begin(), xs.end(), xs.begin(), [columnCount](IndexT i) { return i % columnCount; });
+
+				vs.resize(elemCount);
+				std::fill(vs.begin(), vs.end(), value);
 			}
 		}
 

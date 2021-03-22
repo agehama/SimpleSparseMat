@@ -193,4 +193,36 @@ BOOST_AUTO_TEST_CASE(SparseMat_Append)
 	}
 }
 
+BOOST_AUTO_TEST_CASE(SparseMat_Fill0)
+{
+	ssmat::SparseMat<int> sparseMat;
+	sparseMat.fill(3, 7, 0);
+
+	const auto& rowBeginIndices = sparseMat.getRowBeginIndices();
+	const auto& xs = sparseMat.getXs();
+	const auto& vs = sparseMat.getVs();
+
+	BOOST_CHECK_EQUAL(rowBeginIndices.size(), 0);
+	BOOST_CHECK_EQUAL(xs.size(), 0);
+	BOOST_CHECK_EQUAL(vs.size(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(SparseMat_Fill1)
+{
+	constexpr int width = 3;
+	constexpr int height = 7;
+
+	ssmat::SparseMat<int> sparseMat;
+	sparseMat.fill(width, height, 2);
+	sparseMat.fill(height, width, 1);
+
+	int matOut[height][width] = {};
+	ToArray(sparseMat, matOut);
+
+	FOR_MAT(width, height)
+	{
+		BOOST_CHECK_EQUAL(matOut[y][x], 1);
+	}
+}
+
 BOOST_AUTO_TEST_SUITE_END()
