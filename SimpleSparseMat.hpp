@@ -129,6 +129,13 @@ namespace ssmat
 			*this = SparseMat(SortEntries(cooForm));
 		}
 
+		void append(const std::vector<SparseEntry<T>>& entries)
+		{
+			auto cooForm = decompressEntries();
+			cooForm.insert(cooForm.end(), entries.begin(), entries.end());
+			*this = SparseMat(SortEntries(cooForm));
+		}
+
 		const std::vector<IndexT>& getRowBeginIndices()const { return rowBeginIndices; }
 		const std::vector<IndexT>& getXs()const { return xs; }
 		const std::vector<T>& getVs()const { return vs; }

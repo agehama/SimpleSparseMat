@@ -172,4 +172,33 @@ BOOST_AUTO_TEST_CASE(SparseMat_Insert)
 	}
 }
 
+BOOST_AUTO_TEST_CASE(SparseMat_Append)
+{
+	constexpr int width = 4;
+	constexpr int height = 3;
+	int matIn[height][width] = {
+		{1, 0, 0, 0},
+		{0, 0, 1, 0},
+		{0, 1, 0, 0},
+	};
+
+	auto sparseMatA = FromArray(matIn);
+	matIn[1][3] = 3;
+	matIn[0][3] = 1;
+	matIn[2][0] = 1;
+	std::vector<ssmat::SparseEntry<int>> additionalEntries;
+	additionalEntries.emplace_back(3, 1, 3);
+	additionalEntries.emplace_back(3, 0, 1);
+	additionalEntries.emplace_back(0, 2, 1);
+	sparseMatA.append(additionalEntries);
+
+	int matOut[height][width] = {};
+	ToArray(sparseMatA, matOut);
+
+	FOR_MAT(height, height)
+	{
+		BOOST_CHECK_EQUAL(matIn[y][x], matOut[y][x]);
+	}
+}
+
 BOOST_AUTO_TEST_SUITE_END()
