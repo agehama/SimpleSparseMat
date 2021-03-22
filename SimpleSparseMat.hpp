@@ -94,11 +94,9 @@ namespace ssmat
 		std::vector<SparseEntry<T>> decompressEntries()const
 		{
 			std::vector<SparseEntry<T>> entries(xs.size());
-			for (size_t y = 0; y < rowBeginIndices.size(); ++y)
+			for (size_t y = 0; y < rowCount(); ++y)
 			{
-				const size_t rowBegin = rowBeginIndices[y];
-				const size_t rowEnd = rowBeginIndices.size() == y + 1 ? xs.size() : rowBeginIndices[y + 1];
-				for (size_t i = rowBegin; i < rowEnd; ++i)
+				for (size_t i = rowBegin(y); i < rowEnd(y); ++i)
 				{
 					auto& entry = entries[i];
 					entry.y = y;
@@ -113,22 +111,17 @@ namespace ssmat
 		SparseMat<T> operator*(const SparseMat<T>& B)const
 		{
 			std::vector<SparseEntry<T>> results;
-			for (IndexT yA = 0; yA < rowBeginIndices.size(); ++yA)
+			for (IndexT yA = 0; yA < rowCount(); ++yA)
 			{
-				const IndexT rowBeginA = rowBeginIndices[yA];
-				const IndexT rowEndA = rowBeginIndices.size() == yA + 1 ? xs.size() : rowBeginIndices[yA + 1];
-
 				std::map<IndexT, T> currentRow;
-				for (IndexT yB = 0; yB < B.rowBeginIndices.size(); ++yB)
+				for (IndexT yB = 0; yB < B.rowCount(); ++yB)
 				{
-					const IndexT rowBeginB = B.rowBeginIndices[yB];
-					const IndexT rowEndB = B.rowBeginIndices.size() == yB + 1 ? B.xs.size() : B.rowBeginIndices[yB + 1];
-					if (rowBeginB == rowEndB)
+					if (B.rowBegin(yB) == B.rowEnd(yB))
 					{
 						continue;
 					}
 
-					for (IndexT iA = rowBeginA; iA < rowEndA; ++iA)
+					for (IndexT iA = rowBegin(yA); iA < rowEnd(yA); ++iA)
 					{
 						const IndexT xA = xs[iA];
 						if (xA != yB)
@@ -136,7 +129,7 @@ namespace ssmat
 							continue;
 						}
 
-						for (IndexT iB = rowBeginB; iB < rowEndB; ++iB)
+						for (IndexT iB = B.rowBegin(yB); iB < B.rowEnd(yB); ++iB)
 						{
 							const IndexT xB = B.xs[iB];
 							currentRow[xB] += vs[iA] * B.vs[iB];

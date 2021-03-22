@@ -40,7 +40,7 @@ namespace
 	template<typename T, size_t W, size_t H>
 	void ToArray(const ssmat::SparseMat<T>& sparseMat, T(&matOut)[H][W])
 	{
-		for (size_t y = 0; y < sparseMat.rowCount(); y++)
+		for (size_t y = 0; y < sparseMat.rowCount(); ++y)
 		{
 			for (size_t i = sparseMat.rowBegin(y); i < sparseMat.rowEnd(y); ++i)
 			{
