@@ -40,19 +40,11 @@ namespace
 	template<typename T, size_t W, size_t H>
 	void ToArray(const ssmat::SparseMat<T>& sparseMat, T(&matOut)[H][W])
 	{
-		const auto& rowBeginIndices = sparseMat.getRowBeginIndices();
-		const auto& xs = sparseMat.getXs();
-		const auto& vs = sparseMat.getVs();
-
-		BOOST_CHECK_EQUAL(vs.size(), xs.size());
-
-		for (size_t y = 0; y < rowBeginIndices.size(); ++y)
+		for (size_t y = 0; y < sparseMat.rowCount(); y++)
 		{
-			const size_t rowBegin = rowBeginIndices[y];
-			const size_t rowEnd = rowBeginIndices.size() == y + 1 ? xs.size() : rowBeginIndices[y + 1];
-			for (size_t i = rowBegin; i < rowEnd; ++i)
+			for (size_t i = sparseMat.rowBegin(y); i < sparseMat.rowEnd(y); ++i)
 			{
-				matOut[y][xs[i]] = vs[i];
+				matOut[y][sparseMat.getX(i)] = sparseMat.getV(i);
 			}
 		}
 	}

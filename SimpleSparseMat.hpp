@@ -136,6 +136,12 @@ namespace ssmat
 			*this = SparseMat(SortEntries(cooForm));
 		}
 
+		IndexT rowCount()const { return rowBeginIndices.size(); }
+		IndexT rowBegin(IndexT row)const { return rowBeginIndices[row]; }
+		IndexT rowEnd(IndexT row)const { return rowBeginIndices.size() <= row + 1 ? xs.size() : rowBeginIndices[row + 1]; }
+		IndexT getX(IndexT i)const { return xs[i]; }
+		T getV(IndexT i)const { return vs[i]; }
+
 		const std::vector<IndexT>& getRowBeginIndices()const { return rowBeginIndices; }
 		const std::vector<IndexT>& getXs()const { return xs; }
 		const std::vector<T>& getVs()const { return vs; }
