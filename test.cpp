@@ -1,5 +1,6 @@
 #include <ostream>
 
+#define NOMINMAX
 #define BOOST_TEST_MAIN
 #include <boost/test/included/unit_test.hpp>
 
@@ -137,6 +138,35 @@ BOOST_AUTO_TEST_CASE(SparseMat_Multiplication)
 		BOOST_CHECK_EQUAL(matC[y][x], matC_[y][x]);
 	}
 }
+
+BOOST_AUTO_TEST_CASE(SparseMat_Summation)
+{
+	constexpr int width = 4;
+	constexpr int height = 3;
+	const int matA[height][width] = {
+		{0, 1, 2, 1},
+		{2, 3, 0, 5},
+		{1, 0, 4, 0},
+	};
+	const int matB[height][width] = {
+		{3, 1, 2, 1},
+		{0, 0, 1, 0},
+		{1, 0, 3, 4},
+	};
+
+	const auto sparseMatA = FromArray(matA);
+	const auto sparseMatB = FromArray(matB);
+	const auto sparseMatC = sparseMatA + sparseMatB;
+
+	int matC_[height][width] = {};
+	ToArray(sparseMatC, matC_);
+
+	FOR_MAT(width, height)
+	{
+		BOOST_CHECK_EQUAL(matA[y][x] + matB[y][x], matC_[y][x]);
+	}
+}
+
 
 BOOST_AUTO_TEST_CASE(SparseMat_Insert)
 {

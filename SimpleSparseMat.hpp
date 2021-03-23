@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <algorithm>
 
 namespace ssmat
 {
@@ -145,6 +146,41 @@ namespace ssmat
 
 			return SparseMat<T>(results);
 		}
+
+		SparseMat<T> operator+(const SparseMat<T>& B)const
+		{
+			std::vector<SparseEntry<T>> results;
+
+			const IndexT maxRowCount = std::max(rowCount(), B.rowCount());
+			for (IndexT y = 0; y < maxRowCount; ++y)
+			{
+				std::map<IndexT, T> currentRow;
+
+				if (y < rowBeginIndices.size())
+				{
+					for (IndexT i = rowBegin(y); i < rowEnd(y); ++i)
+					{
+						currentRow[xs[i]] = vs[i];
+					}
+				}
+
+				if (y < B.rowBeginIndices.size())
+				{
+					for (IndexT i = B.rowBegin(y); i < B.rowEnd(y); ++i)
+					{
+						currentRow[B.xs[i]] += B.vs[i];
+					}
+				}
+
+				for (const auto& entry : currentRow)
+				{
+					results.emplace_back(entry.first, y, entry.second);
+				}
+			}
+
+			return SparseMat<T>(results);
+		}
+		//todo: transpose()
 
 		void insert(IndexT x, IndexT y, T v)
 		{
