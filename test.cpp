@@ -255,4 +255,31 @@ BOOST_AUTO_TEST_CASE(SparseMat_Fill1)
 	}
 }
 
+BOOST_AUTO_TEST_CASE(SparseMat_Transpose)
+{
+	constexpr int width = 4;
+	constexpr int height = 3;
+	const int matA[height][width] = {
+		{0, 5, 0, 3},
+		{2, 0, 0, 5},
+		{1, 7, 0, 0},
+	};
+	const int matAt[width][height] = {
+		{0, 2, 1},
+		{5, 0, 7},
+		{0, 0, 0},
+		{3, 5, 0},
+	};
+
+	auto sparseMat = FromArray(matA);
+	sparseMat.transpose();
+	int matOut[width][height] = {};
+	ToArray(sparseMat, matOut);
+
+	FOR_MAT(height, width)
+	{
+		BOOST_CHECK_EQUAL(matOut[y][x], matAt[y][x]);
+	}
+}
+
 BOOST_AUTO_TEST_SUITE_END()

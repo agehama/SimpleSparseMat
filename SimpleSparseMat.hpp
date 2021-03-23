@@ -180,7 +180,18 @@ namespace ssmat
 
 			return SparseMat<T>(results);
 		}
-		//todo: transpose()
+
+		void transpose()
+		{
+			auto cooForm = decompressEntries();
+			for (auto& entry : cooForm)
+			{
+				const IndexT temp = entry.x;
+				entry.x = entry.y;
+				entry.y = temp;
+			}
+			*this = SparseMat(SortEntries(cooForm));
+		}
 
 		void insert(IndexT x, IndexT y, T v)
 		{
