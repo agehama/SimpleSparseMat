@@ -35,12 +35,12 @@ namespace ssmat
 	{
 		switch (format)
 		{
-		case ssmat::SparseFormat::CSR:
+		case SparseFormat::CSR:
 			std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
 				return a.y == b.y ? a.x < b.x : a.y < b.y;
 				});
 			break;
-		case ssmat::SparseFormat::CSC:
+		case SparseFormat::CSC:
 			std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
 				return a.x == b.x ? a.y < b.y : a.x < b.x;
 				});
@@ -67,7 +67,7 @@ namespace ssmat
 
 			switch (format)
 			{
-			case ssmat::SparseFormat::CSR:
+			case SparseFormat::CSR:
 				for (size_t i = 0; i < sortedEntries.size(); ++i)
 				{
 					const auto& entry = sortedEntries[i];
@@ -80,7 +80,7 @@ namespace ssmat
 					vs.push_back(entry.v);
 				}
 				break;
-			case ssmat::SparseFormat::CSC:
+			case SparseFormat::CSC:
 				for (size_t i = 0; i < sortedEntries.size(); ++i)
 				{
 					const auto& entry = sortedEntries[i];
@@ -133,7 +133,7 @@ namespace ssmat
 
 			switch (format)
 			{
-			case ssmat::SparseFormat::CSR:
+			case SparseFormat::CSR:
 				for (size_t y = 0; y < rowCount(); ++y)
 				{
 					for (size_t i = rowBegin(y); i < rowEnd(y); ++i)
@@ -145,7 +145,7 @@ namespace ssmat
 					}
 				}
 				break;
-			case ssmat::SparseFormat::CSC:
+			case SparseFormat::CSC:
 				for (size_t x = 0; x < rowCount(); ++x)
 				{
 					for (size_t i = rowBegin(x); i < rowEnd(x); ++i)
@@ -164,7 +164,7 @@ namespace ssmat
 			return entries;
 		}
 
-		SparseMat<T> operator*(const SparseMat<T>& B)const
+		/*SparseMat<T> operator*(const SparseMat<T>& B)const
 		{
 			std::vector<SparseEntry<T>> results;
 			for (IndexT yA = 0; yA < rowCount(); ++yA)
@@ -196,6 +196,59 @@ namespace ssmat
 				for (const auto& entry : currentRow)
 				{
 					results.emplace_back(entry.first, yA, entry.second);
+				}
+			}
+
+			return SparseMat<T>(results, SparseFormat::CSR);
+		}*/
+
+		SparseMat<T> operator*(SparseMat<T>& B)
+		{
+			toCSR();
+			B.toCSC();
+
+			std::vector<SparseEntry<T>> results;
+			for (IndexT yA = 0; yA < rowCount(); ++yA)
+			{
+				for (IndexT xB = 0; xB < B.rowCount(); ++xB)
+				{
+					T currentValue = 0;
+
+					const IndexT beginIndexA = rowBegin(yA);
+					const IndexT endIndexA = rowEnd(yA);
+
+					const IndexT beginIndexB = B.rowBegin(xB);
+					const IndexT endIndexB = B.rowEnd(xB);
+
+					if (beginIndexA == endIndexA || beginIndexB == endIndexB)
+					{
+						continue;
+					}
+
+					for (IndexT iA = beginIndexA, iB = beginIndexB; iA < endIndexA && iB < endIndexB;)
+					{
+						const IndexT xA = xs[iA];
+						const IndexT yB = B.xs[iB];
+						if (xA == yB)
+						{
+							currentValue += vs[iA] * B.vs[iB];
+							++iA;
+							++iB;
+						}
+						else if (yB < xA)
+						{
+							++iB;
+						}
+						else
+						{
+							++iA;
+						}
+					}
+
+					if (currentValue != 0)
+					{
+						results.emplace_back(xB, yA, currentValue);
+					}
 				}
 			}
 
@@ -260,6 +313,28 @@ namespace ssmat
 			auto cooForm = decompressEntries();
 			cooForm.insert(cooForm.end(), entries.begin(), entries.end());
 			*this = SparseMat(SortEntries(cooForm, format), format);
+		}
+
+		void toCSR()
+		{
+			if (format == SparseFormat::CSR)
+			{
+				return;
+			}
+
+			auto cooForm = decompressEntries();
+			*this = SparseMat(SortEntries(cooForm, SparseFormat::CSR), SparseFormat::CSR);
+		}
+
+		void toCSC()
+		{
+			if (format == SparseFormat::CSC)
+			{
+				return;
+			}
+
+			auto cooForm = decompressEntries();
+			*this = SparseMat(SortEntries(cooForm, SparseFormat::CSC), SparseFormat::CSC);
 		}
 
 		IndexT rowCount()const { return rowBeginIndices.size(); }

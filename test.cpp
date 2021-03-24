@@ -161,8 +161,8 @@ BOOST_AUTO_TEST_CASE(SparseMat_Multiplication)
 	int matC[height][height] = {};
 	MultipleMat(matA, matB, matC);
 
-	const auto sparseMatA = FromArray(matA);
-	const auto sparseMatB = FromArray(matB);
+	auto sparseMatA = FromArray(matA);
+	auto sparseMatB = FromArray(matB);
 	const auto sparseMatC = sparseMatA * sparseMatB;
 
 	int matC_[height][height] = {};
