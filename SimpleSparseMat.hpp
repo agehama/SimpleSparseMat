@@ -28,12 +28,27 @@ namespace ssmat
 		return entries;
 	}
 
+	enum class SparseFormat { CSR, CSC };
+
 	template<typename T>
-	std::vector<SparseEntry<T>>& SortEntries(std::vector<SparseEntry<T>>& entries)
+	std::vector<SparseEntry<T>>& SortEntries(std::vector<SparseEntry<T>>& entries, SparseFormat format)
 	{
-		std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
-			return a.y == b.y ? a.x < b.x : a.y < b.y;
-			});
+		switch (format)
+		{
+		case ssmat::SparseFormat::CSR:
+			std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+				return a.y == b.y ? a.x < b.x : a.y < b.y;
+				});
+			break;
+		case ssmat::SparseFormat::CSC:
+			std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+				return a.x == b.x ? a.y < b.y : a.x < b.x;
+				});
+			break;
+		default:
+			break;
+		}
+
 		return entries;
 	}
 
@@ -43,23 +58,43 @@ namespace ssmat
 	public:
 		SparseMat() = default;
 
-		SparseMat(const std::vector<SparseEntry<T>>& sortedEntries)
+		SparseMat(const std::vector<SparseEntry<T>>& sortedEntries, SparseFormat format) : format(format)
 		{
 			if (sortedEntries.empty())
 			{
 				return;
 			}
 
-			for (size_t i = 0; i < sortedEntries.size(); ++i)
+			switch (format)
 			{
-				const auto& entry = sortedEntries[i];
-				while (rowBeginIndices.size() < entry.y + 1)
+			case ssmat::SparseFormat::CSR:
+				for (size_t i = 0; i < sortedEntries.size(); ++i)
 				{
-					rowBeginIndices.emplace_back(static_cast<IndexT>(xs.size()));
-				}
+					const auto& entry = sortedEntries[i];
+					while (rowBeginIndices.size() < entry.y + 1)
+					{
+						rowBeginIndices.emplace_back(static_cast<IndexT>(xs.size()));
+					}
 
-				xs.push_back(entry.x);
-				vs.push_back(entry.v);
+					xs.push_back(entry.x);
+					vs.push_back(entry.v);
+				}
+				break;
+			case ssmat::SparseFormat::CSC:
+				for (size_t i = 0; i < sortedEntries.size(); ++i)
+				{
+					const auto& entry = sortedEntries[i];
+					while (rowBeginIndices.size() < entry.x + 1)
+					{
+						rowBeginIndices.emplace_back(static_cast<IndexT>(xs.size()));
+					}
+
+					xs.push_back(entry.y);
+					vs.push_back(entry.v);
+				}
+				break;
+			default:
+				break;
 			}
 		}
 
@@ -95,15 +130,35 @@ namespace ssmat
 		std::vector<SparseEntry<T>> decompressEntries()const
 		{
 			std::vector<SparseEntry<T>> entries(xs.size());
-			for (size_t y = 0; y < rowCount(); ++y)
+
+			switch (format)
 			{
-				for (size_t i = rowBegin(y); i < rowEnd(y); ++i)
+			case ssmat::SparseFormat::CSR:
+				for (size_t y = 0; y < rowCount(); ++y)
 				{
-					auto& entry = entries[i];
-					entry.y = y;
-					entry.x = xs[i];
-					entry.v = vs[i];
+					for (size_t i = rowBegin(y); i < rowEnd(y); ++i)
+					{
+						auto& entry = entries[i];
+						entry.y = y;
+						entry.x = xs[i];
+						entry.v = vs[i];
+					}
 				}
+				break;
+			case ssmat::SparseFormat::CSC:
+				for (size_t x = 0; x < rowCount(); ++x)
+				{
+					for (size_t i = rowBegin(x); i < rowEnd(x); ++i)
+					{
+						auto& entry = entries[i];
+						entry.y = xs[i];
+						entry.x = x;
+						entry.v = vs[i];
+					}
+				}
+				break;
+			default:
+				break;
 			}
 
 			return entries;
@@ -144,7 +199,7 @@ namespace ssmat
 				}
 			}
 
-			return SparseMat<T>(results);
+			return SparseMat<T>(results, SparseFormat::CSR);
 		}
 
 		SparseMat<T> operator+(const SparseMat<T>& B)const
@@ -178,7 +233,7 @@ namespace ssmat
 				}
 			}
 
-			return SparseMat<T>(results);
+			return SparseMat<T>(results, SparseFormat::CSR);
 		}
 
 		void transpose()
@@ -190,21 +245,21 @@ namespace ssmat
 				entry.x = entry.y;
 				entry.y = temp;
 			}
-			*this = SparseMat(SortEntries(cooForm));
+			*this = SparseMat(SortEntries(cooForm, format), format);
 		}
 
 		void insert(IndexT x, IndexT y, T v)
 		{
 			auto cooForm = decompressEntries();
 			cooForm.emplace_back(x, y, v);
-			*this = SparseMat(SortEntries(cooForm));
+			*this = SparseMat(SortEntries(cooForm, format), format);
 		}
 
 		void append(const std::vector<SparseEntry<T>>& entries)
 		{
 			auto cooForm = decompressEntries();
 			cooForm.insert(cooForm.end(), entries.begin(), entries.end());
-			*this = SparseMat(SortEntries(cooForm));
+			*this = SparseMat(SortEntries(cooForm, format), format);
 		}
 
 		IndexT rowCount()const { return rowBeginIndices.size(); }
@@ -216,10 +271,13 @@ namespace ssmat
 		const std::vector<IndexT>& getRowBeginIndices()const { return rowBeginIndices; }
 		const std::vector<IndexT>& getXs()const { return xs; }
 		const std::vector<T>& getVs()const { return vs; }
+		std::vector<T>& getVs() { return vs; }
+		SparseFormat getFormat()const { return format; }
 
 	private:
 		std::vector<IndexT> rowBeginIndices;
 		std::vector<IndexT> xs;
 		std::vector<T> vs;
+		SparseFormat format = SparseFormat::CSR;
 	};
 }

@@ -35,18 +35,34 @@ namespace
 				}
 			}
 		}
-		return ssmat::SparseMat<T>(entries);
+		return ssmat::SparseMat<T>(entries, ssmat::SparseFormat::CSR);
 	}
 
 	template<typename T, size_t W, size_t H>
 	void ToArray(const ssmat::SparseMat<T>& sparseMat, T(&matOut)[H][W])
 	{
-		for (size_t y = 0; y < sparseMat.rowCount(); ++y)
+		switch (sparseMat.getFormat())
 		{
-			for (size_t i = sparseMat.rowBegin(y); i < sparseMat.rowEnd(y); ++i)
+		case ssmat::SparseFormat::CSR:
+			for (size_t y = 0; y < sparseMat.rowCount(); ++y)
 			{
-				matOut[y][sparseMat.getX(i)] = sparseMat.getV(i);
+				for (size_t i = sparseMat.rowBegin(y); i < sparseMat.rowEnd(y); ++i)
+				{
+					matOut[y][sparseMat.getX(i)] = sparseMat.getV(i);
+				}
 			}
+			break;
+		case ssmat::SparseFormat::CSC:
+			for (size_t y = 0; y < sparseMat.rowCount(); ++y)
+			{
+				for (size_t i = sparseMat.rowBegin(y); i < sparseMat.rowEnd(y); ++i)
+				{
+					matOut[sparseMat.getX(i)][y] = sparseMat.getV(i);
+				}
+			}
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -96,9 +112,28 @@ BOOST_AUTO_TEST_CASE(SparseMat_Init2)
 		{ 2,1,0,1,0,2,1,0 },
 		{ 4,3,1,5,2,1,2,1 }
 	);
-	const auto entriesIn = SortEntries(data);
+	const auto entriesIn = SortEntries(data, ssmat::SparseFormat::CSR);
 
-	const ssmat::SparseMat<int> sparseMat(entriesIn);
+	const ssmat::SparseMat<int> sparseMat(entriesIn, ssmat::SparseFormat::CSR);
+	const auto entriesOut = sparseMat.decompressEntries();
+
+	BOOST_CHECK_EQUAL(entriesIn.size(), entriesOut.size());
+	for (size_t i = 0; i < entriesIn.size(); ++i)
+	{
+		BOOST_CHECK_EQUAL(entriesIn[i], entriesOut[i]);
+	}
+}
+
+BOOST_AUTO_TEST_CASE(SparseMat_Init3)
+{
+	auto data = ssmat::MakeEntries(
+		{ 2,1,3,3,2,0,0,1 },
+		{ 2,1,0,1,0,2,1,0 },
+		{ 4,3,1,5,2,1,2,1 }
+	);
+	const auto entriesIn = SortEntries(data, ssmat::SparseFormat::CSC);
+
+	const ssmat::SparseMat<int> sparseMat(entriesIn, ssmat::SparseFormat::CSC);
 	const auto entriesOut = sparseMat.decompressEntries();
 
 	BOOST_CHECK_EQUAL(entriesIn.size(), entriesOut.size());
@@ -166,7 +201,6 @@ BOOST_AUTO_TEST_CASE(SparseMat_Summation)
 		BOOST_CHECK_EQUAL(matA[y][x] + matB[y][x], matC_[y][x]);
 	}
 }
-
 
 BOOST_AUTO_TEST_CASE(SparseMat_Insert)
 {
