@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 namespace ssmat
 {
@@ -164,84 +165,76 @@ namespace ssmat
 			return entries;
 		}
 
-		/*SparseMat<T> operator*(const SparseMat<T>& B)const
-		{
-			std::vector<SparseEntry<T>> results;
-			for (IndexT yA = 0; yA < rowCount(); ++yA)
-			{
-				std::map<IndexT, T> currentRow;
-				for (IndexT yB = 0; yB < B.rowCount(); ++yB)
-				{
-					if (B.rowBegin(yB) == B.rowEnd(yB))
-					{
-						continue;
-					}
-
-					for (IndexT iA = rowBegin(yA); iA < rowEnd(yA); ++iA)
-					{
-						const IndexT xA = xs[iA];
-						if (xA != yB)
-						{
-							continue;
-						}
-
-						for (IndexT iB = B.rowBegin(yB); iB < B.rowEnd(yB); ++iB)
-						{
-							const IndexT xB = B.xs[iB];
-							currentRow[xB] += vs[iA] * B.vs[iB];
-						}
-					}
-				}
-
-				for (const auto& entry : currentRow)
-				{
-					results.emplace_back(entry.first, yA, entry.second);
-				}
-			}
-
-			return SparseMat<T>(results, SparseFormat::CSR);
-		}*/
-
 		SparseMat<T> operator*(SparseMat<T>& B)
 		{
 			toCSR();
 			B.toCSC();
 
 			std::vector<SparseEntry<T>> results;
+
+			IndexT* const pXA0 = &xs[0];
+			IndexT* const pXB0 = &B.xs[0];
+
+			T* const pVA0 = &vs[0];
+			T* const pVB0 = &B.vs[0];
+
 			for (IndexT yA = 0; yA < rowCount(); ++yA)
 			{
+				const IndexT beginIndexA = rowBegin(yA);
+				const IndexT endIndexA = rowEnd(yA);
+
+				IndexT* const pBeginXA = pXA0 + beginIndexA;
+				IndexT* const pEndXA = pXA0 + endIndexA;
+				const IndexT prevEndXA = *(pEndXA - 1);
+
+				T* const pBeginVA = pVA0 + beginIndexA;
+
 				for (IndexT xB = 0; xB < B.rowCount(); ++xB)
 				{
-					T currentValue = 0;
-
-					const IndexT beginIndexA = rowBegin(yA);
-					const IndexT endIndexA = rowEnd(yA);
-
 					const IndexT beginIndexB = B.rowBegin(xB);
 					const IndexT endIndexB = B.rowEnd(xB);
 
-					if (beginIndexA == endIndexA || beginIndexB == endIndexB)
+					IndexT* const pEndXB = pXB0 + endIndexB;
+					const IndexT prevEndXB = *(pEndXB - 1);
+
+					IndexT* pXA = pBeginXA;
+					T* pVA = pBeginVA;
+
+					IndexT* pXB = pXB0 + beginIndexB;
+					T* pVB = pVB0 + beginIndexB;
+
+					if (pXA == pEndXA || pXB == pEndXB)
 					{
 						continue;
 					}
 
-					for (IndexT iA = beginIndexA, iB = beginIndexB; iA < endIndexA && iB < endIndexB;)
+					T currentValue = 0;
+
+					for (;;)
 					{
-						const IndexT xA = xs[iA];
-						const IndexT yB = B.xs[iB];
-						if (xA == yB)
+						if (*pXB < *pXA)
 						{
-							currentValue += vs[iA] * B.vs[iB];
-							++iA;
-							++iB;
+							if (prevEndXB < *pXA || ++pXB == pEndXB)
+							{
+								break;
+							}
+							++pVB;
 						}
-						else if (yB < xA)
+						else if (*pXA < *pXB)
 						{
-							++iB;
+							if (prevEndXA < *pXB || ++pXA == pEndXA)
+							{
+								break;
+							}
+							++pVA;
 						}
 						else
 						{
-							++iA;
+							currentValue += *(pVA++) * *(pVB++);
+							if (++pXA == pEndXA || ++pXB == pEndXB)
+							{
+								break;
+							}
 						}
 					}
 
